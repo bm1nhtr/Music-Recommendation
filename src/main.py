@@ -4,7 +4,7 @@ Point d'entrée principal pour les algorithmes graph classiques
 import argparse
 import os
 from graph_loader import load_kg, load_ratings, get_user_history
-from graph_visualizer import visualize_graph, visualize_subgraph, print_graph_statistics
+from graph_visualizer import visualize_graph_structure, visualize_all_relations, print_graph_statistics
 
 # Configuration par défaut
 DATA_PATH = '../final_data'  # Chemin vers les données traitées
@@ -80,28 +80,22 @@ def main():
     if args.visualize:
         print("\n=== Génération des visualisations ===")
         
-        # 1. Visualisation MACRO: Graphe complet
-        print("\n1. Visualisation MACRO: Graphe complet du dataset...")
-        visualize_graph(kg, max_nodes=args.max_nodes, 
-                       output_file=f'../final_data/{args.dataset}/graph_macro.png',
-                       dataset_info=dataset_info)
+        output_dir = f'../final_data/{args.dataset}'
+        os.makedirs(output_dir, exist_ok=True)
         
-        # 2. Visualisation MICRO: User avec le plus de connexions
-        if user_history:
-            # Trouver l'utilisateur avec le plus de connexions
-            user_connections = {user_id: len(items) for user_id, items in user_history.items()}
-            if user_connections:
-                top_user = max(user_connections.items(), key=lambda x: x[1])
-                top_user_id, top_user_connections = top_user
-                
-                print(f"\n2. Visualisation MICRO: Utilisateur {top_user_id} ({top_user_connections} connexions)...")
-                user_items = user_history[top_user_id]
-                output_files = visualize_subgraph(kg, user_items[:20], max_hops=args.max_hops,
-                                 output_file=f'../final_data/{args.dataset}/graph_micro_user_{top_user_id}',
-                                 dataset_info=dataset_info)
-                print(f"  {len(output_files)} figures créées (une par type de relation)")
-        else:
-            print("\n2. Visualisation MICRO: Pas de données utilisateur disponibles")
+        # 1. Visualisation de la structure générale
+        print("\n1. Visualisation de la structure générale du graphe...")
+        visualize_graph_structure(kg, 
+                                 output_file=os.path.join(output_dir, 'graph_structure.png'),
+                                 dataset_info=dataset_info,
+                                 max_nodes=args.max_nodes)
+        
+        # 2. Visualisations par type de relation
+        print("\n2. Visualisations par type de relation...")
+        visualize_all_relations(kg, 
+                               output_dir=output_dir,
+                               dataset_info=dataset_info,
+                               max_nodes=args.max_nodes)
     
     #TODO: Implement the algorithm
     # Les algorithmes qu'on a fait : BFS, Dijkstra, Prim, etc...

@@ -69,7 +69,20 @@ def load_kg(dataset_path, dataset_name='music', use_small=False):
     if os.path.exists(kg_file + '.npy'):
         kg_np = np.load(kg_file + '.npy')
     else:
-        kg_np = np.loadtxt(kg_file + '.txt', dtype=np.int32)
+        # Détecter le nombre de colonnes (3 ou 4)
+        with open(kg_file + '.txt', 'r', encoding='utf-8') as f:
+            first_line = f.readline().strip()
+            num_cols = len(first_line.split('\t'))
+        
+        if num_cols == 4:
+            # Format avec weights
+            kg_np = np.loadtxt(kg_file + '.txt', dtype=np.int32)
+        else:
+            # Format ancien sans weights (backward compatibility)
+            kg_data = np.loadtxt(kg_file + '.txt', dtype=np.int32)
+            # Ajouter une colonne de poids = 1 par défaut
+            kg_np = np.column_stack([kg_data, np.ones(len(kg_data), dtype=np.int32)])
+        
         np.save(kg_file + '.npy', kg_np)
     
     n_entity = len(set(kg_np[:, 0]) | set(kg_np[:, 2]))
@@ -93,15 +106,25 @@ def construct_kg(kg_np):
     Construire la structure du graphe depuis un array numpy
     
     Args:
-        kg_np: Array numpy de shape (n_triples, 3) avec [head, relation, tail]
+        kg_np: Array numpy de shape (n_triples, 3) ou (n_triples, 4)
+               avec [head, relation, tail] ou [head, relation, tail, weight]
     
     Returns:
-        Dictionnaire {head: [(tail, relation), ...]}
+        Dictionnaire {head: [(tail, relation, weight), ...]}
+        Si pas de weight, weight = 1 par défaut
     """
     print('Construction du graphe de connaissances ...')
     kg = collections.defaultdict(list)
-    for head, relation, tail in kg_np:
-        kg[head].append((tail, relation))
+    
+    if kg_np.shape[1] == 4:
+        # Format avec weights
+        for head, relation, tail, weight in kg_np:
+            kg[head].append((tail, relation, weight))
+    else:
+        # Format ancien sans weights (backward compatibility)
+        for head, relation, tail in kg_np:
+            kg[head].append((tail, relation, 1))  # Poids par défaut = 1
+    
     return kg
 
 

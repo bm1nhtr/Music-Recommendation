@@ -79,7 +79,7 @@ def filter_raw_data(raw_data_path, max_users=50, max_artists=100):
     return selected_users, selected_artists
 
 
-def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50, max_artists=100):
+def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50, max_artists=100, min_co_listens=None):
     """
     Preprocess music dataset (Last.fm)
     
@@ -268,13 +268,22 @@ def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50
                 artist_similarity[(artist1, artist2)] += 1
     
     # Filtrer: seulement garder les connexions avec au moins min_co_listens utilisateurs
-    min_co_listens = 2
+    # Pour les petits datasets, réduire le seuil pour avoir plus de relations
+    if min_co_listens is None:
+        if reduce_data and n_users < 50:
+            min_co_listens = 1  # Seuil réduit pour petits datasets
+        else:
+            min_co_listens = 2  # Seuil normal
+    
     artist_artist_relations = []
     for (artist1, artist2), count in artist_similarity.items():
         if count >= min_co_listens:
             artist_artist_relations.append((artist1, artist2, count))
     
     print(f'    {len(artist_artist_relations)} relations Artist-Artist créées (seuil: {min_co_listens} co-écoutes)')
+    if len(artist_artist_relations) == 0:
+        print(f'    ⚠️ ATTENTION: Aucune relation Artist-Artist trouvée!')
+        print(f'       Le seuil min_co_listens={min_co_listens} est peut-être trop élevé pour ce dataset.')
     
     # Write kg_final.txt
     kg_file = os.path.join(output_path, 'kg_final.txt')
@@ -289,22 +298,24 @@ def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50
     with open(kg_file, 'w', encoding='utf-8') as writer:
         # APPROACH 2: User -> Artist relations (listened_to)
         for user_entity_idx, artist_idx, weight in user_artist_relations:
-            writer.write(f'{user_entity_idx}\t{relation_id2index["listened_to"]}\t{artist_idx}\n')
+            writer.write(f'{user_entity_idx}\t{relation_id2index["listened_to"]}\t{artist_idx}\t{weight}\n')
             n_kg_triples += 1
         
         # APPROACH 2: Artist -> User relations (listened_by) - reverse
+        # Utiliser le même poids que listened_to
         for user_entity_idx, artist_idx, weight in user_artist_relations:
-            writer.write(f'{artist_idx}\t{relation_id2index["listened_by"]}\t{user_entity_idx}\n')
+            writer.write(f'{artist_idx}\t{relation_id2index["listened_by"]}\t{user_entity_idx}\t{weight}\n')
             n_kg_triples += 1
         
         # APPROACH 3: Artist -> Artist relations (similar_to)
         for artist1, artist2, weight in artist_artist_relations:
-            writer.write(f'{artist1}\t{relation_id2index["similar_to"]}\t{artist2}\n')
+            writer.write(f'{artist1}\t{relation_id2index["similar_to"]}\t{artist2}\t{weight}\n')
             n_kg_triples += 1
         
         # APPROACH 3: Reverse Artist -> Artist relations (similar_from)
+        # Utiliser le même poids que similar_to
         for artist1, artist2, weight in artist_artist_relations:
-            writer.write(f'{artist2}\t{relation_id2index["similar_from"]}\t{artist1}\n')
+            writer.write(f'{artist2}\t{relation_id2index["similar_from"]}\t{artist1}\t{weight}\n')
             n_kg_triples += 1
     
     n_entities = len(entity_id2index)
@@ -456,6 +467,8 @@ if __name__ == '__main__':
                        help='Nombre maximum d\'utilisateurs (si --reduce)')
     parser.add_argument('--max_artists', type=int, default=100,
                        help='Nombre maximum d\'artistes (si --reduce)')
+    parser.add_argument('--min_co_listens', type=int, default=None,
+                       help='Seuil minimum de co-écoutes pour relations Artist-Artist (défaut: 2, ou 1 pour petits datasets)')
     
     args = parser.parse_args()
     DATASET = args.dataset
@@ -468,7 +481,8 @@ if __name__ == '__main__':
         preprocess_music(raw_data_path, output_path, 
                         reduce_data=args.reduce,
                         max_users=args.max_users,
-                        max_artists=args.max_artists)
+                        max_artists=args.max_artists,
+                        min_co_listens=args.min_co_listens)
     else:
         # Use old preprocessing for movie/book
         entity_id2index = dict()

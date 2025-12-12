@@ -10,45 +10,21 @@ Pour une documentation complète des algorithmes implémentés, consultez **[REA
 - **Parcours de graphe** : BFS, DFS
 - **Arbre couvrant de poids minimum** : Prim, Kruskal
 - **Plus court chemin** : Dijkstra
-- **Plus courts chemins avancés** : Bellman-Ford, Floyd-Warshall
+- **Plus courts chemins avancés** : Bellman-Ford
+
+### 📊 Guide de Visualisation
+
+Pour comprendre **quelles visualisations sont nécessaires** pour chaque catégorie d'algorithmes et comment les interpréter, consultez **[final_data/music/VISUALISATION_ALGORITHMES_FR.md](final_data/music/VISUALISATION_ALGORITHMES_FR.md)**.
+
+Ce guide explique :
+- Les visualisations requises pour chaque algorithme (BFS, DFS, Prim, Kruskal, Dijkstra, Bellman-Ford)
+- Comment comparer les algorithmes dans chaque catégorie
+- Les spécifications techniques (couleurs, tailles, formats)
 
 ## Vue d'ensemble
 
 Ce projet implémente un modèle de recommandation qui utilise un graphe de connaissances pour améliorer les recommandations. Le modèle propage les préférences utilisateur à travers le graphe en utilisant des mécanismes d'attention multi-hops.
 
-## Structure du Projet
-
-```
-├── src/
-│   ├── graph_loader.py      # Chargement et construction du graphe + métadonnées
-│   ├── graph_visualizer.py  # Visualisation macro/micro avec légendes
-│   ├── main.py              # Point d'entrée principal
-│   ├── preprocess.py        # Prétraitement avec option de réduction
-│   └── data_loader.py       # (Legacy - pour référence)
-├── rawdata/                 # Données brutes (ignoré par git)
-│   └── {dataset}/           # (ex: music)
-│       ├── artists.dat
-│       ├── user_artists.dat
-│       └── ...
-├── final_data/              # Données traitées
-│   └── {dataset}/           # (ex: music)
-│       ├── ratings_final.txt       # Interactions utilisateur-item
-│       ├── kg_final.txt            # Graphe de connaissances
-│       ├── dataset_metadata.txt    # Métadonnées (type, taille, paramètres)
-│       ├── graph_macro.png         # Visualisation macro (vue d'ensemble)
-│       └── graph_micro_user_X.png  # Visualisation micro (utilisateur)
-└── README.md
-```
-
-## Format des Données
-
-### Fichier Ratings (`ratings_final.txt`)
-Format: `user_id \t item_id \t label`
-- `label`: 1 pour interaction positive, 0 pour interaction négative
-
-### Fichier Graphe de Connaissances (`kg_final.txt`)
-Format: `head_entity \t relation \t tail_entity`
-- Les entités et relations doivent être des indices entiers
 
 ## Installation
 
@@ -89,11 +65,11 @@ Voir la section "Visualiser le graphe" ci-dessous pour plus de détails.
 
 ### Option 1: Prétraitement avec réduction automatique (RECOMMANDÉ)
 
-Pour créer un dataset réduit directement pendant le preprocessing (50 users, 100 artists par défaut):
+Pour créer un dataset réduit directement pendant le preprocessing (30 users, 50 artists par défaut):
 
 ```bash
 cd src
-python preprocess.py --dataset music --reduce --max_users 50 --max_artists 100
+python preprocess.py --dataset music --reduce --max_users 30 --max_artists 50
 ```
 
 **Avantages:**
@@ -124,7 +100,9 @@ Le preprocessing convertit depuis `rawdata/music/`:
 python main.py --dataset music --visualize
 ```
 
-**Le script génère automatiquement 2 visualisations:**
+**Note importante** : Pour les visualisations spécifiques aux algorithmes (BFS, DFS, Prim, Kruskal, Dijkstra, Bellman-Ford), consultez le **[Guide de Visualisation](final_data/music/VISUALISATION_ALGORITHMES_FR.md)** qui explique en détail quelles visualisations sont nécessaires pour chaque catégorie d'algorithmes.
+
+**Visualisations de base (actuelles):**
 
 1. **Vue MACRO** (`graph_macro.png`):
    - Visualisation complète du dataset filtré
@@ -142,14 +120,6 @@ python main.py --dataset music --visualize
 - Sélection automatique de l'utilisateur le plus connecté pour la vue micro
 - Légendes claires pour comprendre la structure du graphe
 
-**Options de visualisation:**
-```bash
-# Limiter le nombre de nœuds affichés
-python main.py --dataset music --visualize --max_nodes 200
-
-# Spécifier un utilisateur particulier
-python main.py --dataset music --visualize --user_id 5
-```
 
 Voir `final_data/music/DATA_EXPLANATION_FR.md` pour plus de détails sur le format des données.
 

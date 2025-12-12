@@ -4,6 +4,18 @@
 
 Ce projet implémente un système de recommandation musicale basé sur un **graphe de connaissances** construit à partir des **patterns d'écoute** (nombre d'écoutes) des utilisateurs. Le graphe permet d'appliquer différents algorithmes classiques pour découvrir des artistes similaires et générer des recommandations personnalisées.
 
+## 🎯 Objectif de Comparaison
+
+Ce projet implémente **6 algorithmes** organisés en **3 catégories** pour permettre une **comparaison systématique** :
+
+| Catégorie | Algorithmes | Task Commun | Critères de Comparaison |
+|-----------|-------------|-------------|------------------------|
+| **I. Parcours de Graphe** | BFS, DFS | Explorer le graphe depuis les artistes écoutés | Ordre d'exploration, profondeur vs largeur |
+| **II. Arbre Couvrant Minimum** | Prim, Kruskal | Construire un MST pour identifier les connexions principales | Efficacité, approche (greedy local vs global) |
+| **III. Plus Court Chemin** | Dijkstra, Bellman-Ford | Trouver les chemins les plus courts (connexions les plus fortes) | Gestion des poids, complexité |
+
+**Important** : Chaque paire d'algorithmes dans la même catégorie résout **exactement le même problème** mais avec des approches différentes, permettant une comparaison équitable.
+
 ## Structure du Graphe
 
 ### Entités
@@ -40,7 +52,23 @@ head_entity \t relation_id \t tail_entity
 
 ---
 
-## I. Parcours de Graphe
+## I. Parcours de Graphe : BFS vs DFS
+
+### 🎯 Task Commun
+
+**Problème à résoudre** : Explorer le graphe depuis les artistes que l'utilisateur a déjà écoutés pour découvrir des artistes similaires à différentes distances.
+
+**Input** : Liste des artistes écoutés par l'utilisateur (nœuds de départ)
+
+**Output** : Liste des artistes recommandés, organisés par niveau de similarité (hops)
+
+**Critères de comparaison** :
+- Ordre d'exploration (largeur vs profondeur)
+- Nombre de nœuds visités
+- Temps d'exécution
+- Qualité des recommandations (artistes proches vs connexions profondes)
+
+---
 
 ### 1. BFS (Breadth-First Search) - Parcours en Largeur
 
@@ -122,7 +150,38 @@ Recommandations: Artistes D, E, F (connexions profondes)
 
 ---
 
-## II. Arbre Couvrant de Poids Minimum (MST)
+### 📊 Comparaison BFS vs DFS
+
+| Critère | BFS | DFS |
+|---------|-----|-----|
+| **Ordre d'exploration** | Niveau par niveau (largeur) | Chemin complet avant de revenir (profondeur) |
+| **Première découverte** | Artistes les plus proches (hop 1) | Artistes sur un chemin spécifique |
+| **Mémoire** | O(V) - file d'attente | O(V) - pile de récursion |
+| **Meilleur pour** | Découvrir artistes proches | Explorer des genres musicaux spécifiques |
+| **Recommandations** | Artistes par niveau de similarité | Artistes avec connexions profondes |
+| **Exemple** | Hop 1: [Queen, Stones], Hop 2: [Deep Purple] | Chemin: Beatles → Queen → Led Zeppelin → Deep Purple |
+
+**Quand utiliser BFS** : Pour des recommandations générales, découvrir des artistes "proches" des préférences actuelles.
+
+**Quand utiliser DFS** : Pour explorer des chemins spécifiques, découvrir des connexions profondes dans un genre musical particulier.
+
+---
+
+## II. Arbre Couvrant de Poids Minimum : Prim vs Kruskal
+
+### 🎯 Task Commun
+
+**Problème à résoudre** : Construire un arbre couvrant minimum (MST) pour identifier les connexions les plus importantes entre artistes dans le graphe.
+
+**Input** : Graphe complet avec poids (nombre de co-listens entre artistes)
+
+**Output** : Arbre couvrant minimum contenant les connexions les plus fortes (poids maximum)
+
+**Critères de comparaison** :
+- Efficacité algorithmique
+- Approche (greedy local vs global)
+- Temps d'exécution
+- Structure du MST résultant
 
 ### 3. Algorithme de Prim
 
@@ -204,7 +263,51 @@ MST construit avec les connexions les plus fortes
 
 ---
 
-## III. Plus Court Chemin
+### 📊 Comparaison Prim vs Kruskal
+
+| Critère | Prim | Kruskal |
+|---------|------|---------|
+| **Approche** | Greedy local (commence depuis un nœud) | Greedy global (trie toutes les arêtes) |
+| **Structure de données** | Min-heap (ou matrice d'adjacence) | Union-Find + tri des arêtes |
+| **Complexité** | O(E log V) avec heap, O(V²) avec matrice | O(E log E) |
+| **Meilleur pour** | Graphes denses (beaucoup d'arêtes) | Graphes clairsemés (peu d'arêtes) |
+| **Dépendance du point de départ** | Oui (commence depuis un nœud spécifique) | Non (considère toutes les arêtes) |
+| **MST résultant** | Peut varier selon le point de départ | Toujours le même (si poids uniques) |
+| **Exemple** | Commence depuis Beatles, ajoute progressivement | Trie toutes les arêtes, ajoute par poids décroissant |
+
+**Quand utiliser Prim** : 
+- Graphe dense (beaucoup d'arêtes)
+- On veut un MST qui commence depuis un artiste spécifique
+- On a une représentation en matrice d'adjacence
+
+**Quand utiliser Kruskal** :
+- Graphe clairsemé (peu d'arêtes)
+- On veut un MST global indépendant du point de départ
+- On veut identifier des communautés d'artistes
+
+**Note** : Pour notre graphe de recommandation, les deux algorithmes produisent le même MST (même structure de connexions principales), mais avec des approches différentes.
+
+---
+
+## III. Plus Court Chemin : Dijkstra vs Bellman-Ford
+
+### 🎯 Task Commun
+
+**Problème à résoudre** : Trouver les chemins les plus courts depuis les artistes écoutés par l'utilisateur vers tous les autres artistes, où la distance représente la force de connexion (distance courte = connexion forte).
+
+**Input** : 
+- Graphe avec poids (nombre de co-listens)
+- Nœuds sources : artistes écoutés par l'utilisateur
+
+**Output** : 
+- Distances depuis les sources vers tous les autres artistes
+- Recommandations : artistes avec les distances les plus courtes (connexions les plus fortes)
+
+**Critères de comparaison** :
+- Gestion des poids (positifs vs négatifs)
+- Complexité temporelle
+- Robustesse
+- Efficacité selon la densité du graphe
 
 ### 5. Algorithme de Dijkstra
 
@@ -296,7 +399,35 @@ Recommandations basées sur les chemins les plus courts
 
 ---
 
-### 7. Algorithme de Floyd-Warshall
+### 📊 Comparaison Dijkstra vs Bellman-Ford
+
+| Critère | Dijkstra | Bellman-Ford |
+|---------|----------|--------------|
+| **Poids supportés** | Uniquement positifs | Positifs et négatifs |
+| **Complexité** | O((V + E) log V) avec heap | O(V × E) |
+| **Structure de données** | Min-heap (priority queue) | Tableau simple |
+| **Détection de cycles négatifs** | Non | Oui |
+| **Efficacité** | Plus rapide (graphes denses) | Plus lent mais plus robuste |
+| **Meilleur pour** | Graphes avec poids positifs uniquement | Graphes avec poids négatifs possibles |
+| **Initialisation** | Distance source = 0, autres = ∞ | Même |
+| **Relaxation** | Une fois par nœud (greedy) | V-1 fois toutes les arêtes |
+| **Exemple** | User → Beatles → Queen (distance: 0.0002) | Même résultat, mais vérifie aussi cycles négatifs |
+
+**Quand utiliser Dijkstra** :
+- ✅ **Notre cas principal** : Graphe avec poids positifs uniquement (nombre de co-listens)
+- Plus efficace et plus rapide
+- Recommandations de haute qualité
+
+**Quand utiliser Bellman-Ford** :
+- Graphe avec poids négatifs possibles (scores de similarité négatifs)
+- Besoin de détecter des cycles de poids négatif
+- Validation et robustesse
+
+**Note** : Pour notre graphe de recommandation (poids = nombre de co-listens, toujours positifs), **Dijkstra est recommandé** car plus efficace. Bellman-Ford est utile pour des cas spéciaux ou pour validation.
+
+---
+
+### 7. Algorithme de Floyd-Warshall (Optionnel - Analyse Globale)
 
 #### Principe
 
@@ -337,17 +468,51 @@ Recommandations basées sur toutes les connexions possibles
 
 ---
 
-## Comparaison des Algorithmes
+## 📊 Tableau Comparatif Global
 
-| Algorithme | Objectif Principal | Complexité Temps | Complexité Espace | Meilleur Pour |
-|------------|-------------------|------------------|-------------------|---------------|
-| **BFS** | Exploration par niveau | O(V + E) | O(V) | Découvrir artistes proches |
-| **DFS** | Exploration en profondeur | O(V + E) | O(V) | Chemins spécifiques |
-| **Prim** | MST (structure principale) | O(E log V) | O(V) | Clusters d'artistes |
-| **Kruskal** | MST (approche globale) | O(E log E) | O(V) | Communautés d'artistes |
-| **Dijkstra** | Plus court chemin (source unique) | O((V+E) log V) | O(V) | Recommandations qualité |
-| **Bellman-Ford** | Plus court chemin (poids négatifs) | O(V × E) | O(V) | Cas spéciaux |
-| **Floyd-Warshall** | Plus courts chemins (toutes paires) | O(V³) | O(V²) | Analyse globale |
+### Vue d'ensemble de tous les algorithmes
+
+| Algorithme | Catégorie | Objectif Principal | Complexité Temps | Complexité Espace | Meilleur Pour |
+|------------|-----------|-------------------|------------------|-------------------|---------------|
+| **BFS** | Parcours | Exploration par niveau | O(V + E) | O(V) | Découvrir artistes proches |
+| **DFS** | Parcours | Exploration en profondeur | O(V + E) | O(V) | Chemins spécifiques |
+| **Prim** | MST | MST (structure principale) | O(E log V) | O(V) | Clusters d'artistes (graphes denses) |
+| **Kruskal** | MST | MST (approche globale) | O(E log E) | O(V) | Communautés d'artistes (graphes clairsemés) |
+| **Dijkstra** | Plus court chemin | Plus court chemin (source unique) | O((V+E) log V) | O(V) | Recommandations qualité (poids positifs) |
+| **Bellman-Ford** | Plus court chemin | Plus court chemin (poids négatifs) | O(V × E) | O(V) | Cas spéciaux, validation |
+| **Floyd-Warshall** | Plus court chemin | Plus courts chemins (toutes paires) | O(V³) | O(V²) | Analyse globale (optionnel) |
+
+### Comparaison par Catégorie
+
+#### Catégorie I : Parcours de Graphe
+
+| Critère | BFS | DFS |
+|---------|-----|-----|
+| **Task** | Explorer depuis artistes écoutés | Explorer depuis artistes écoutés |
+| **Approche** | Largeur (niveau par niveau) | Profondeur (chemin complet) |
+| **Complexité** | O(V + E) | O(V + E) |
+| **Recommandations** | Artistes par hop (1, 2, 3...) | Artistes sur chemins profonds |
+| **Avantage** | Découvre les plus proches d'abord | Découvre connexions spécifiques |
+
+#### Catégorie II : Arbre Couvrant Minimum
+
+| Critère | Prim | Kruskal |
+|---------|------|---------|
+| **Task** | Construire MST | Construire MST |
+| **Approche** | Greedy local (depuis un nœud) | Greedy global (toutes arêtes) |
+| **Complexité** | O(E log V) | O(E log E) |
+| **Meilleur pour** | Graphes denses | Graphes clairsemés |
+| **Avantage** | Efficace sur graphes denses | Indépendant du point de départ |
+
+#### Catégorie III : Plus Court Chemin
+
+| Critère | Dijkstra | Bellman-Ford |
+|---------|----------|--------------|
+| **Task** | Plus court chemin depuis sources | Plus court chemin depuis sources |
+| **Poids** | Positifs uniquement | Positifs et négatifs |
+| **Complexité** | O((V+E) log V) | O(V × E) |
+| **Détection cycles** | Non | Oui |
+| **Avantage** | Plus rapide (notre cas) | Plus robuste |
 
 ---
 
@@ -361,13 +526,51 @@ cd src
 python preprocess.py --dataset music --reduce --max_users 50 --max_artists 100
 ```
 
-### Exécution des Algorithmes
+### Exécution et Comparaison des Algorithmes
+
+#### Comparaison BFS vs DFS
 
 ```bash
-# 2. Appliquer un algorithme spécifique
-python main.py --dataset music --algorithm bfs --user_id 0 --max_hops 2
-python main.py --dataset music --algorithm dijkstra --user_id 0
+# Exécuter BFS
+python main.py --dataset music --algorithm bfs --user_id 0 --max_hops 3
+
+# Exécuter DFS
+python main.py --dataset music --algorithm dfs --user_id 0 --max_hops 3
+
+# Comparer les résultats : nombre de nœuds visités, temps, recommandations
+```
+
+#### Comparaison Prim vs Kruskal
+
+```bash
+# Exécuter Prim
 python main.py --dataset music --algorithm prim --user_id 0
+
+# Exécuter Kruskal
+python main.py --dataset music --algorithm kruskal --user_id 0
+
+# Comparer : temps d'exécution, structure du MST, clusters identifiés
+```
+
+#### Comparaison Dijkstra vs Bellman-Ford
+
+```bash
+# Exécuter Dijkstra
+python main.py --dataset music --algorithm dijkstra --user_id 0
+
+# Exécuter Bellman-Ford
+python main.py --dataset music --algorithm bellman_ford --user_id 0
+
+# Comparer : temps d'exécution, distances calculées, recommandations
+```
+
+### Script de Comparaison Automatique
+
+```bash
+# Comparer tous les algorithmes d'une catégorie
+python compare_algorithms.py --category parcours --user_id 0
+python compare_algorithms.py --category mst --user_id 0
+python compare_algorithms.py --category shortest_path --user_id 0
 ```
 
 ### Visualisation
@@ -379,42 +582,105 @@ python main.py --dataset music --visualize --max_nodes 100
 
 ---
 
+## 🎯 Stratégie de Comparaison
+
+### Comment Comparer les Algorithmes
+
+Pour chaque catégorie, les algorithmes résolvent **exactement le même problème** mais avec des approches différentes :
+
+1. **Parcours (BFS vs DFS)** :
+   - **Input identique** : Liste des artistes écoutés par l'utilisateur
+   - **Output comparable** : Liste des artistes recommandés
+   - **Différence** : Ordre d'exploration (largeur vs profondeur)
+   - **Métriques** : Nombre de nœuds visités, temps d'exécution, qualité des recommandations
+
+2. **MST (Prim vs Kruskal)** :
+   - **Input identique** : Graphe complet avec poids
+   - **Output comparable** : MST avec les connexions principales
+   - **Différence** : Approche algorithmique (local vs global)
+   - **Métriques** : Temps d'exécution, structure du MST, efficacité selon densité
+
+3. **Plus Court Chemin (Dijkstra vs Bellman-Ford)** :
+   - **Input identique** : Graphe avec poids, nœuds sources
+   - **Output comparable** : Distances et chemins les plus courts
+   - **Différence** : Gestion des poids, complexité
+   - **Métriques** : Temps d'exécution, robustesse, qualité des recommandations
+
+### Métriques de Comparaison
+
+Pour chaque paire d'algorithmes, comparer :
+- ⏱️ **Temps d'exécution** : Mesurer le temps réel
+- 💾 **Utilisation mémoire** : Espace utilisé
+- 🎯 **Qualité des recommandations** : Pertinence des artistes recommandés
+- 📊 **Couverture** : Nombre de nœuds visités/explorés
+- 🔍 **Structure découverte** : Clusters, chemins, connexions
+
+---
+
 ## Exemples de Cas d'Usage
 
-### Cas 1 : Découverte d'Artistes Proches (BFS)
+### Cas 1 : Découverte d'Artistes Proches (BFS vs DFS)
 
 **Scénario** : Un utilisateur aime The Beatles et veut découvrir des artistes similaires.
 
-**Solution** : BFS explore le graphe niveau par niveau depuis The Beatles.
-
-**Résultat** :
+**Solution BFS** : Explore niveau par niveau depuis The Beatles.
 - Hop 1 : The Rolling Stones, Queen, Led Zeppelin
 - Hop 2 : Deep Purple, Black Sabbath, The Who
-- Recommandations : Artistes par ordre de proximité
+- **Avantage** : Découvre les plus proches d'abord
 
-### Cas 2 : Recommandations de Haute Qualité (Dijkstra)
+**Solution DFS** : Explore en profondeur depuis The Beatles.
+- Chemin 1 : Beatles → Queen → Led Zeppelin → Deep Purple
+- Chemin 2 : Beatles → Stones → The Who → The Kinks
+- **Avantage** : Découvre des connexions profondes dans un genre
 
-**Scénario** : Trouver les artistes ayant les connexions les plus fortes.
+**Comparaison** :
+- BFS : Recommandations générales, artistes "proches"
+- DFS : Recommandations spécialisées, chemins spécifiques
 
-**Solution** : Dijkstra utilise les poids (nombre de co-listens) pour trouver les chemins les plus courts.
-
-**Résultat** :
-- The Beatles → The Rolling Stones (poids: 8000, distance: 0.000125)
-- The Beatles → Queen (poids: 5000, distance: 0.0002)
-- Recommandation : The Rolling Stones (connexion la plus forte)
-
-### Cas 3 : Identification de Clusters (Prim/Kruskal)
+### Cas 2 : Identification de Clusters (Prim vs Kruskal)
 
 **Scénario** : Comprendre la structure du graphe et identifier des communautés d'artistes.
 
-**Solution** : MST révèle les connexions les plus importantes.
+**Solution Prim** : Construit MST depuis un artiste de départ (ex: Beatles).
+- Commence depuis Beatles
+- Ajoute progressivement : Stones, Queen, Led Zeppelin
+- **Avantage** : Efficace sur graphes denses, MST centré sur point de départ
 
-**Résultat** :
+**Solution Kruskal** : Construit MST en triant toutes les arêtes.
+- Trie toutes les arêtes par poids
+- Ajoute les connexions les plus fortes : (Beatles, Stones), (Queen, Led Zeppelin)...
+- **Avantage** : MST global, indépendant du point de départ
+
+**Résultat commun** :
 - Cluster Rock : [Beatles, Stones, Queen, Led Zeppelin]
 - Cluster Pop : [Michael Jackson, Madonna, Prince]
 - Recommandations : Artistes dans le même cluster
 
-### Cas 4 : Analyse Globale (Floyd-Warshall)
+**Comparaison** :
+- Prim : Plus rapide sur graphes denses, dépend du point de départ
+- Kruskal : Plus adapté aux graphes clairsemés, MST global
+
+### Cas 3 : Recommandations de Haute Qualité (Dijkstra vs Bellman-Ford)
+
+**Scénario** : Trouver les artistes ayant les connexions les plus fortes depuis The Beatles.
+
+**Solution Dijkstra** : Utilise min-heap pour trouver les chemins les plus courts.
+- The Beatles → The Rolling Stones (poids: 8000, distance: 0.000125)
+- The Beatles → Queen (poids: 5000, distance: 0.0002)
+- **Avantage** : Plus rapide (O((V+E) log V)), efficace pour poids positifs
+
+**Solution Bellman-Ford** : Relaxe toutes les arêtes V-1 fois.
+- Même résultat : The Rolling Stones (distance: 0.000125)
+- **Avantage** : Plus robuste, détecte cycles négatifs, gère poids négatifs
+
+**Résultat commun** :
+- Recommandation : The Rolling Stones (connexion la plus forte)
+
+**Comparaison** :
+- Dijkstra : **Recommandé pour notre cas** (poids positifs uniquement), plus rapide
+- Bellman-Ford : Utile pour validation, cas spéciaux avec poids négatifs
+
+### Cas 4 : Analyse Globale (Floyd-Warshall - Optionnel)
 
 **Scénario** : Analyser toutes les connexions possibles entre artistes.
 
