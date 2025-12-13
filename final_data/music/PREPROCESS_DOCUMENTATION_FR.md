@@ -149,6 +149,7 @@ user_id	artist_id	label
 **Structure** :
 - **Artistes** : Indices `0` à `n_artists - 1`
 - **Utilisateurs** : Indices `n_artists` à `n_artists + n_users - 1`
+L'objectif est de differencier les entites pour que la machine ne traite pas artiste entite 0 = user entite 0.
 
 **Exemple** :
 ```
@@ -179,8 +180,8 @@ weight = nombre_d_écoutes  # Directement depuis user_artists.dat
 
 **Exemple** :
 ```
-User 2 (raw) → User 0 (index) → Entity 100 (n_artists=100)
-Artist 51 (raw) → Artist 0 (index)
+User 2 (raw) → User 0 (index mapping) → Entity 100 (n_artists=100)
+Artist 51 (raw) → Artist 0 (index mapping)
 Weight: 13883
 
 Relations créées :
@@ -195,7 +196,7 @@ head_entity \t relation_id \t tail_entity \t weight
 0 \t 1 \t 100 \t 13883
 ```
 
-#### 3.3. Relations Artist-Artist (Approach 3)
+#### 3.3. Relations Artist-Artist (Approach 3) 
 
 **Type de Relations** :
 - `similar_to` (ID: 2) : `artist1 → artist2`
@@ -266,7 +267,7 @@ Pour chaque paire (artist1, artist2) :
 (Stones, Queen) : count = 1 → Ignorer (count < 2)
 ```
 
-**Format dans kg_final.txt** :
+**Format dans kg_final.txt** : we have 2 kg_final text for 2 approach ???
 ```
 0 \t 2 \t 1 \t 5    # Beatles → Stones (similar_to, 5 users)
 1 \t 3 \t 0 \t 5    # Stones → Beatles (similar_from, 5 users)

@@ -85,7 +85,8 @@ def load_kg(dataset_path, dataset_name='music', use_small=False):
         
         np.save(kg_file + '.npy', kg_np)
     
-    n_entity = len(set(kg_np[:, 0]) | set(kg_np[:, 2]))
+    #nombre d'entités à la fois colonne tête et queue
+    n_entity = len(set(kg_np[:, 0]) | set(kg_np[:, 2])) # Têtes et queues, union
     n_relation = len(set(kg_np[:, 1]))
     
     kg = construct_kg(kg_np)
