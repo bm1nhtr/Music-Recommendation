@@ -135,10 +135,10 @@ def visualize_graph_structure(kg, output_file='graph_structure.png', dataset_inf
     legend_elements = [
         Patch(facecolor='lightblue', label='Artiste'),
         Patch(facecolor='orange', label='Utilisateur'),
-        Line2D([0], [0], color='blue', lw=2, label='listened_to (user → artist)'),
-        Line2D([0], [0], color='green', lw=2, label='listened_by (artist → user)'),
-        Line2D([0], [0], color='red', lw=2, label='similar_to (artist → artist)'),
-        Line2D([0], [0], color='purple', lw=2, label='similar_from (artist → artist)'),
+        Line2D([0], [0], color='blue', lw=2, label='listened_to (user -> artist)'),
+        Line2D([0], [0], color='green', lw=2, label='listened_by (artist -> user)'),
+        Line2D([0], [0], color='red', lw=2, label='similar_to (artist -> artist)'),
+        Line2D([0], [0], color='purple', lw=2, label='similar_from (artist -> artist)'),
     ]
     plt.legend(handles=legend_elements, loc='upper left', fontsize=9, framealpha=0.9)
     
@@ -161,10 +161,10 @@ def visualize_relation_type(kg, relation_type, output_file='relation_visualizati
         max_nodes: Nombre maximum de nœuds
     """
     relation_names = {
-        0: 'listened_to (user → artist)',
-        1: 'listened_by (artist → user)',
-        2: 'similar_to (artist → artist)',
-        3: 'similar_from (artist → artist)'
+        0: 'listened_to (user -> artist)',
+        1: 'listened_by (artist -> user)',
+        2: 'similar_to (artist -> artist)',
+        3: 'similar_from (artist -> artist)'
     }
     
     relation_name = relation_names.get(relation_type, f'Relation {relation_type}')
@@ -178,7 +178,7 @@ def visualize_relation_type(kg, relation_type, output_file='relation_visualizati
         print(f'  n_artists_actual = {n_artists_actual}, n_users_actual = {n_users_actual}')
         print(f'  Range attendu: artistes 0-{n_artists_actual-1}, users {n_artists_actual}-{n_artists_actual+n_users_actual-1}')
     else:
-        print(f'  ⚠️ n_artists_actual non trouvé dans dataset_info, validation désactivée')
+        print(f'  [ATTENTION] n_artists_actual non trouve dans dataset_info, validation desactivee')
     
     G = nx.DiGraph()
     all_nodes = set()
@@ -210,17 +210,17 @@ def visualize_relation_type(kg, relation_type, output_file='relation_visualizati
                     head_is_user = head >= n_artists_actual
                     tail_is_user = tail >= n_artists_actual
                     
-                    if relation_type == 0:  # listened_to: user → artist
+                    if relation_type == 0:  # listened_to: user -> artist
                         if not (head_is_user and not tail_is_user):
-                            invalid_edges.append((head, tail, f"devrait être user → artist (head={head} {'user' if head_is_user else 'artist'}, tail={tail} {'user' if tail_is_user else 'artist'})"))
+                            invalid_edges.append((head, tail, f"devrait etre user -> artist (head={head} {'user' if head_is_user else 'artist'}, tail={tail} {'user' if tail_is_user else 'artist'})"))
                             is_valid = False
-                    elif relation_type == 1:  # listened_by: artist → user
+                    elif relation_type == 1:  # listened_by: artist -> user
                         if not (not head_is_user and tail_is_user):
-                            invalid_edges.append((head, tail, f"devrait être artist → user (head={head} {'user' if head_is_user else 'artist'}, tail={tail} {'user' if tail_is_user else 'artist'})"))
+                            invalid_edges.append((head, tail, f"devrait etre artist -> user (head={head} {'user' if head_is_user else 'artist'}, tail={tail} {'user' if tail_is_user else 'artist'})"))
                             is_valid = False
-                    elif relation_type in [2, 3]:  # similar_to/similar_from: artist → artist
+                    elif relation_type in [2, 3]:  # similar_to/similar_from: artist -> artist
                         if head_is_user or tail_is_user:
-                            invalid_edges.append((head, tail, f"devrait être artist → artist (head={head} {'user' if head_is_user else 'artist'}, tail={tail} {'user' if tail_is_user else 'artist'})"))
+                            invalid_edges.append((head, tail, f"devrait etre artist -> artist (head={head} {'user' if head_is_user else 'artist'}, tail={tail} {'user' if tail_is_user else 'artist'})"))
                             is_valid = False
                 
                 if is_valid:
@@ -230,26 +230,26 @@ def visualize_relation_type(kg, relation_type, output_file='relation_visualizati
     
     # Afficher les erreurs si trouvées
     if nodes_out_of_range:
-        print(f'  ⚠️ ATTENTION: {len(nodes_out_of_range)} nœuds hors plage détectés (premiers 10): {sorted(list(nodes_out_of_range))[:10]}')
-        print(f'     Ces nœuds suggèrent que le fichier kg_final.txt provient d\'un ancien preprocessing.')
-        print(f'     💡 Solution: Relancez le preprocessing pour régénérer les données.')
+        print(f'  [ATTENTION] {len(nodes_out_of_range)} noeuds hors plage detectes (premiers 10): {sorted(list(nodes_out_of_range))[:10]}')
+        print(f'     Ces noeuds suggerent que le fichier kg_final.txt provient d\'un ancien preprocessing.')
+        print(f'     [SOLUTION] Relancez le preprocessing pour regenerer les donnees.')
     
     if invalid_edges:
-        print(f'  ⚠️ ATTENTION: {len(invalid_edges)} arêtes invalides trouvées (premières 5):')
+        print(f'  [ATTENTION] {len(invalid_edges)} aretes invalides trouvees (premieres 5):')
         for head, tail, msg in invalid_edges[:5]:
             print(f'    - ({head}, {tail}): {msg}')
         if len(invalid_edges) > 5:
             print(f'    ... et {len(invalid_edges) - 5} autres')
         if nodes_out_of_range:
-            print(f'  💡 Ces erreurs sont probablement dues à un fichier kg_final.txt obsolète.')
+            print(f'  [SOLUTION] Ces erreurs sont probablement dues a un fichier kg_final.txt obsolete.')
             print(f'     Relancez: python preprocess.py --dataset music --reduce --max_users 30 --max_artists 50 --min_co_listens 1')
     
     if len(all_edges) == 0:
-        print(f'  ❌ Aucune arête valide trouvée pour {relation_name}')
+        print(f'  [ERREUR] Aucune arete valide trouvee pour {relation_name}')
         if nodes_out_of_range:
-            print(f'  💡 Le fichier kg_final.txt semble obsolète. Relancez le preprocessing.')
+            print(f'  [SOLUTION] Le fichier kg_final.txt semble obsolete. Relancez le preprocessing.')
         elif relation_type in [2, 3]:
-            print(f'  💡 Suggestion: Le seuil min_co_listens est peut-être trop élevé.')
+            print(f'  [SUGGESTION] Le seuil min_co_listens est peut-etre trop eleve.')
             print(f'     Relancez: python preprocess.py --dataset music --reduce --max_users 30 --max_artists 50 --min_co_listens 1')
         return
     
@@ -332,15 +332,17 @@ def visualize_relation_type(kg, relation_type, output_file='relation_visualizati
     title = f'Relation: {relation_name}\n'
     title += f'{G.number_of_nodes()} nœuds, {G.number_of_edges()} arêtes'
     if invalid_edges:
-        title += f'\n⚠️ {len(invalid_edges)} arêtes invalides ignorées'
+        title += f'\n[ATTENTION] {len(invalid_edges)} aretes invalides ignorees'
     plt.title(title, fontsize=11, fontweight='bold')
     plt.axis('off')
     
     # Légende
     from matplotlib.patches import Patch
+    from matplotlib.lines import Line2D
     legend_elements = [
         Patch(facecolor='lightblue', label='Artiste'),
         Patch(facecolor='orange', label='Utilisateur'),
+        Line2D([0], [0], color=edge_color, lw=2, label=relation_name),
         Patch(facecolor='white', edgecolor='none', label='---'),
         Patch(facecolor='white', edgecolor='none', label='Épaisseur = Poids (plus épais = plus fort)'),
     ]

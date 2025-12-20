@@ -2,6 +2,45 @@ import argparse
 import numpy as np
 import collections
 import os
+import hashlib
+
+
+def compute_file_hash(file_path):
+    """
+    Calculer le hash SHA256 d'un fichier pour vérifier l'intégrité des données.
+    
+    Cette fonction calcule un checksum cryptographique (SHA256) d'un fichier,
+    permettant de détecter toute modification ou corruption des données. Le hash
+    est utilisé pour garantir la reproducibility entre différentes machines.
+    
+    Algorithme:
+    - Utilise SHA256 (Secure Hash Algorithm 256 bits)
+    - Lit le fichier par chunks de 4KB pour gérer les gros fichiers efficacement
+    - Retourne le hash en format hexadécimal (64 caractères)
+    
+    Utilisation:
+    - Lors du preprocessing: calcule les hash de kg_final.txt et ratings_final.txt
+    - Les hash sont sauvegardés dans dataset_metadata.txt
+    - Lors du chargement: compare les hash actuels avec ceux sauvegardés
+    
+    Args:
+        file_path: Chemin absolu ou relatif vers le fichier à hasher
+        
+    Returns:
+        str: Hash SHA256 en hexadécimal (64 caractères)
+            Exemple: "a1b2c3d4e5f6..."
+    
+    Raises:
+        FileNotFoundError: Si le fichier n'existe pas
+        IOError: Si le fichier ne peut pas être lu
+    """
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        # Lire le fichier par chunks de 4KB pour optimiser la mémoire
+        # Cela permet de gérer les gros fichiers sans charger tout en mémoire
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
 
 RATING_FILE_NAME = dict({'movie': 'ratings.dat', 'book': 'BX-Book-Ratings.csv', 'news': 'ratings.txt'})
 SEP = dict({'movie': '::', 'book': ';', 'news': '\t'})
@@ -10,71 +49,199 @@ THRESHOLD = dict({'movie': 4, 'book': 0, 'news': 0})
 
 def filter_raw_data(raw_data_path, max_users=50, max_artists=100):
     """
-    Filtrer les données brutes pour créer un sous-ensemble plus petit
-    Modifie directement les fichiers dans raw_data_path
+    Filtrer les données brutes pour créer un sous-ensemble plus petit.
+    
+    Cette fonction sélectionne les utilisateurs et artistes les plus actifs (basé sur
+    le nombre d'interactions) et crée un fichier filtré. Elle gère automatiquement
+    la restauration depuis backup si le fichier a déjà été filtré précédemment.
+    
+    IMPORTANT - Gestion du backup:
+    - Si un fichier .backup existe, cela signifie que user_artists.dat a déjà été filtré
+    - La fonction restaure automatiquement depuis le backup pour avoir les données complètes
+    - Cela permet de re-filter avec de nouveaux paramètres sans perdre les données originales
     
     Args:
-        raw_data_path: Chemin vers rawdata/music
-        max_users: Nombre maximum d'utilisateurs à garder
-        max_artists: Nombre maximum d'artistes à garder
+        raw_data_path: Chemin vers rawdata/music (dossier contenant les fichiers .dat)
+        max_users: Nombre maximum d'utilisateurs à garder (sélectionne les plus actifs)
+        max_artists: Nombre maximum d'artistes à garder (sélectionne les plus écoutés)
+    
+    Returns:
+        tuple: (selected_users, selected_artists)
+            - selected_users: Ensemble des IDs utilisateurs sélectionnés
+            - selected_artists: Ensemble des IDs artistes sélectionnés
+            - None, None si le fichier n'existe pas
+    
+    Side effects:
+        - Modifie user_artists.dat (écrit le fichier filtré)
+        - Crée user_artists.dat.backup si n'existe pas déjà (sauvegarde du fichier original)
     """
     print(f'Filtrage des données brutes: max {max_users} utilisateurs, {max_artists} artistes...')
     
     user_artists_file = os.path.join(raw_data_path, 'user_artists.dat')
+    backup_file = user_artists_file + '.backup'
+    
     if not os.path.exists(user_artists_file):
         print('Fichier user_artists.dat non trouvé, pas de filtrage')
         return None, None
     
-    # Lire et analyser user_artists.dat
+    # ========================================================================
+    # ÉTAPE 1: Gestion automatique du backup (restauration si nécessaire)
+    # ========================================================================
+    # Si un fichier .backup existe, cela signifie que user_artists.dat a déjà
+    # été filtré lors d'un preprocessing précédent. Pour permettre un nouveau
+    # filtrage avec des paramètres différents, on doit restaurer les données
+    # complètes depuis le backup.
+    #
+    # Pourquoi c'est important:
+    # - Sans restauration, on ne peut filter que depuis les données déjà filtrées
+    # - Cela limite les possibilités (ex: on ne peut pas demander 100 artists
+    #   si le fichier filtré n'en contient que 15)
+    # - La restauration garantit qu'on travaille toujours avec les données complètes
+    # ========================================================================
+    if os.path.exists(backup_file):
+        # Compter les interactions actuelles pour information (avant restauration)
+        current_interactions = 0
+        with open(user_artists_file, 'r', encoding='utf-8') as f:
+            next(f)  # skip header
+            for line in f:
+                if line.strip():
+                    current_interactions += 1
+        
+        print(f'[INFO] Backup détecté: le fichier a déjà été filtré ({current_interactions} interactions)')
+        print(f'   Restauration depuis le backup pour avoir les données complètes...')
+        
+        # Restaurer le fichier original depuis le backup
+        import shutil
+        shutil.copy(backup_file, user_artists_file)
+        
+        # Recompter après restauration pour confirmer
+        restored_interactions = 0
+        with open(user_artists_file, 'r', encoding='utf-8') as f:
+            next(f)  # skip header
+            for line in f:
+                if line.strip():
+                    restored_interactions += 1
+        print(f'   ✅ Fichier restauré: {restored_interactions} interactions disponibles')
+    
+    # ========================================================================
+    # ÉTAPE 2: Lecture et parsing du fichier user_artists.dat
+    # ========================================================================
+    # Format du fichier: userID \t artistID \t weight
+    # - userID: ID unique de l'utilisateur
+    # - artistID: ID unique de l'artiste
+    # - weight: Nombre d'écoutes (listening count)
+    # ========================================================================
     user_artist_data = []
     with open(user_artists_file, 'r', encoding='utf-8') as f:
-        header = next(f)
+        header = next(f)  # Lire et ignorer la ligne d'en-tête
         for line in f:
             parts = line.strip().split('\t')
             if len(parts) >= 3:
                 user_id = int(parts[0])
                 artist_id = int(parts[1])
                 weight = int(parts[2])
+                # Stocker l'interaction complète (user_id, artist_id, weight)
                 user_artist_data.append((user_id, artist_id, weight))
     
-    print(f'Données originales: {len(user_artist_data)} interactions')
+    # Afficher le nombre d'interactions AVANT filtrage (données complètes)
+    # Note: Ce nombre est le même à chaque fois car on restore depuis backup
+    # Le nombre APRÈS filtrage sera différent selon les paramètres
+    if os.path.exists(backup_file):
+        print(f'Données originales (full dataset depuis backup): {len(user_artist_data)} interactions')
+    else:
+        print(f'Données originales (full dataset): {len(user_artist_data)} interactions')
     
-    # Sélectionner les utilisateurs et artistes les plus actifs
-    user_counts = collections.defaultdict(int)
-    artist_counts = collections.defaultdict(int)
+    # ========================================================================
+    # ÉTAPE 3: Calcul des statistiques pour sélection
+    # ========================================================================
+    # On compte:
+    # - Pour chaque utilisateur: nombre d'artistes différents écoutés
+    # - Pour chaque artiste: nombre total d'écoutes (somme des weights)
+    #
+    # Ces métriques permettent de sélectionner les utilisateurs/artistes
+    # les plus actifs/populaires.
+    # ========================================================================
+    user_counts = collections.defaultdict(int)  # user_id -> nombre d'artistes écoutés
+    artist_counts = collections.defaultdict(int)  # artist_id -> nombre total d'écoutes
     
+    # Compter le nombre d'interactions pour chaque utilisateur et artiste
     for user_id, artist_id, weight in user_artist_data:
-        user_counts[user_id] += 1
-        artist_counts[artist_id] += weight
+        user_counts[user_id] += 1  # Nombre d'artistes différents pour cet utilisateur
+        artist_counts[artist_id] += weight  # Somme des écoutes pour cet artiste
     
+    # ========================================================================
+    # ÉTAPE 4: Sélection des top N utilisateurs et artistes
+    # ========================================================================
+    # Trier par ordre décroissant et prendre les top N:
+    # - Utilisateurs: triés par nombre d'artistes écoutés (diversité)
+    # - Artistes: triés par nombre total d'écoutes (popularité)
+    # ========================================================================
     sorted_users = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)
     sorted_artists = sorted(artist_counts.items(), key=lambda x: x[1], reverse=True)
     
+    # Sélectionner les top N (limité par max_users et max_artists)
     selected_users = set([user for user, _ in sorted_users[:max_users]])
     selected_artists = set([artist for artist, _ in sorted_artists[:max_artists]])
     
-    print(f'Sélection: {len(selected_users)} utilisateurs, {len(selected_artists)} artistes')
+    print(f'Sélection avec paramètres --max_users {max_users} --max_artists {max_artists}:')
+    print(f'   → {len(selected_users)} utilisateurs sélectionnés (sur {len(user_counts)} disponibles)')
+    print(f'   → {len(selected_artists)} artistes sélectionnés (sur {len(artist_counts)} disponibles)')
     
-    # Filtrer user_artists.dat
+    # Avertir si le nombre réel est inférieur au nombre demandé
+    # (peut arriver si les données ne contiennent pas assez d'utilisateurs/artistes)
+    if len(selected_users) < max_users:
+        unique_users = len(user_counts)
+        print(f'   ⚠️ Attention: Seulement {len(selected_users)} utilisateurs sélectionnés (demandé: {max_users})')
+        print(f'      → {unique_users} utilisateurs uniques disponibles dans les données')
+    if len(selected_artists) < max_artists:
+        unique_artists = len(artist_counts)
+        print(f'   ⚠️ Attention: Seulement {len(selected_artists)} artistes sélectionnés (demandé: {max_artists})')
+        print(f'      → {unique_artists} artistes uniques disponibles dans les données')
+    
+    # ========================================================================
+    # ÉTAPE 5: Filtrage des données
+    # ========================================================================
+    # Ne garder que les interactions entre les utilisateurs et artistes sélectionnés
+    # ========================================================================
     filtered_data = []
     for user_id, artist_id, weight in user_artist_data:
+        # Garder seulement si l'utilisateur ET l'artiste sont dans la sélection
         if user_id in selected_users and artist_id in selected_artists:
             filtered_data.append((user_id, artist_id, weight))
     
-    # Sauvegarder le fichier original (backup)
-    backup_file = user_artists_file + '.backup'
+    # ========================================================================
+    # ÉTAPE 6: Sauvegarde du fichier original (backup)
+    # ========================================================================
+    # Créer un backup du fichier original AVANT de l'écraser avec la version filtrée
+    # Le backup permet de restaurer les données complètes pour un filtrage ultérieur
+    # ========================================================================
     if not os.path.exists(backup_file):
         import shutil
         shutil.copy(user_artists_file, backup_file)
         print(f'Sauvegarde créée: {backup_file}')
+    else:
+        # Le backup existe déjà (créé lors d'un filtrage précédent)
+        # On le conserve tel quel - il contient toujours les données originales
+        pass
     
-    # Écrire le fichier filtré
+    # ========================================================================
+    # ÉTAPE 7: Écriture du fichier filtré
+    # ========================================================================
+    # Écraser user_artists.dat avec la version filtrée
+    # Ce fichier sera utilisé par le reste du preprocessing
+    # ========================================================================
     with open(user_artists_file, 'w', encoding='utf-8') as f:
-        f.write(header)
+        f.write(header)  # Réécrire l'en-tête
         for user_id, artist_id, weight in filtered_data:
             f.write(f'{user_id}\t{artist_id}\t{weight}\n')
     
-    print(f'Fichier filtré: {len(filtered_data)} interactions')
+    # Afficher le résultat du filtrage avec les paramètres spécifiques
+    # Ce nombre varie selon les paramètres max_users et max_artists
+    reduction_pct = (len(filtered_data) / len(user_artist_data) * 100) if len(user_artist_data) > 0 else 0
+    print(f'\nRésultat du filtrage avec --max_users {max_users} --max_artists {max_artists}:')
+    print(f'   → Interactions après filtrage: {len(filtered_data)} interactions')
+    print(f'   → Réduction: {len(user_artist_data)} (full dataset) → {len(filtered_data)} '
+          f'({reduction_pct:.1f}% conservées)')
     
     return selected_users, selected_artists
 
@@ -282,7 +449,7 @@ def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50
     
     print(f'    {len(artist_artist_relations)} relations Artist-Artist créées (seuil: {min_co_listens} co-écoutes)')
     if len(artist_artist_relations) == 0:
-        print(f'    ⚠️ ATTENTION: Aucune relation Artist-Artist trouvée!')
+        print(f'    [ATTENTION] Aucune relation Artist-Artist trouvee!')
         print(f'       Le seuil min_co_listens={min_co_listens} est peut-être trop élevé pour ce dataset.')
     
     # Write kg_final.txt
@@ -328,6 +495,23 @@ def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50
     print(f'    * similar_to/similar_from: {len(artist_artist_relations) * 2} triplets')
     print(f'  - Nombre total de triplets KG: {n_kg_triples}')
     
+    # ========================================================================
+    # ÉTAPE FINALE: Calcul des checksums pour vérification d'intégrité
+    # ========================================================================
+    # Les checksums SHA256 permettent de garantir la reproducibility:
+    # - Deux personnes avec les mêmes paramètres obtiennent les mêmes fichiers
+    # - Détection automatique de modifications ou corruptions
+    # - Les hash sont sauvegardés dans dataset_metadata.txt
+    #
+    # Utilisation:
+    # - Lors du preprocessing: calcule et sauvegarde les hash
+    # - Lors du chargement: compare les hash actuels avec ceux sauvegardés
+    # - Commande --verify: vérifie l'intégrité sans charger les données
+    # ========================================================================
+    print('Calcul des checksums pour vérification d\'intégrité...')
+    kg_hash = compute_file_hash(kg_file)  # Hash du fichier graphe de connaissances
+    ratings_hash = compute_file_hash(ratings_file)  # Hash du fichier ratings
+    
     # Sauvegarder les métadonnées du dataset
     metadata_file = os.path.join(output_path, 'dataset_metadata.txt')
     with open(metadata_file, 'w', encoding='utf-8') as f:
@@ -341,8 +525,12 @@ def preprocess_music(raw_data_path, output_path, reduce_data=False, max_users=50
         f.write(f'n_entities={n_entities}\n')
         f.write(f'n_relations={n_relations}\n')
         f.write(f'n_kg_triples={n_kg_triples}\n')
+        # Checksums pour vérification d'intégrité
+        f.write(f'kg_file_hash={kg_hash}\n')
+        f.write(f'ratings_file_hash={ratings_hash}\n')
     
     print('Métadonnées sauvegardées dans dataset_metadata.txt')
+    print(f'  Checksums: KG={kg_hash[:16]}..., Ratings={ratings_hash[:16]}...')
     print('Terminé!')
 
 

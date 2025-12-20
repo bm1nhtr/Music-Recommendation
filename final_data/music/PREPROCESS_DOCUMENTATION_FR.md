@@ -161,8 +161,8 @@ Si n_artists = 100, n_users = 50 :
 #### 3.2. Relations User-Artist (Approach 2)
 
 **Type de Relations** :
-- `listened_to` (ID: 0) : `user → artist`
-- `listened_by` (ID: 1) : `artist → user` (relation inverse)
+- `listened_to` *(ID: 0)* : `user → artist`
+- `listened_by` *(ID: 1)* : `artist → user` (relation inverse)
 
 **Calcul du Poids** :
 ```python
@@ -192,15 +192,15 @@ Relations créées :
 **Format dans kg_final.txt** :
 ```
 head_entity \t relation_id \t tail_entity \t weight
-100 \t 0 \t 0 \t 13883
-0 \t 1 \t 100 \t 13883
+100 \t 0 (`listened_to`) \t 0 \t 13883
+0 \t 1 (`listened_by`)\t 100 \t 13883
 ```
 
 #### 3.3. Relations Artist-Artist (Approach 3) 
 
 **Type de Relations** :
-- `similar_to` (ID: 2) : `artist1 → artist2`
-- `similar_from` (ID: 3) : `artist2 → artist1` (relation inverse)
+- `similar_to` *(ID: 2)* : `artist1 → artist2`
+- `similar_from` *(ID: 3)* : `artist2 → artist1` (relation inverse)
 
 **Calcul du Poids** :
 ```python
@@ -319,11 +319,11 @@ cd src
 python preprocess.py --dataset music
 ```
 
-### Option 2: Prétraitement avec réduction (recommandé pour tests)
+### Option 2: Prétraitement avec réduction (On utilise pour ce projet)
 
 ```bash
 cd src
-python preprocess.py --dataset music --reduce --max_users 50 --max_artists 100
+python preprocess.py --dataset music --reduce --max_users 18 --max_artists 18
 ```
 
 **Sortie console** (exemple avec réduction):
@@ -455,7 +455,23 @@ n_artists_actual=98             # Valeur réelle après filtrage
 n_entities=144                  # n_artists + n_users
 n_relations=4                   # Nombre de types de relations
 n_kg_triples=1234               # Nombre total de triplets
+kg_file_hash=abc123def456...   # Checksum SHA256 de kg_final.txt (pour vérification)
+ratings_file_hash=789xyz012...  # Checksum SHA256 de ratings_final.txt (pour vérification)
 ```
+
+### Checksums pour Reproducibility
+
+Les **checksums SHA256** sont calculés automatiquement pour garantir que :
+- Les fichiers n'ont pas été modifiés ou corrompus
+- Deux personnes avec les mêmes paramètres obtiennent exactement les mêmes données
+- La reproducibility est garantie entre différentes machines
+
+**Vérification** :
+```bash
+python main.py --dataset music --verify
+```
+
+Pour plus de détails, voir [TROUBLESHOOTING_CACHE_FR.md](TROUBLESHOOTING_CACHE_FR.md#-vérification-dintégrité-et-reproducibility).
 
 ---
 
@@ -549,26 +565,6 @@ Les poids ne sont pas utilisés directement dans l'algorithme, mais peuvent êtr
   - Diminuer pour plus de connexions (mais plus de bruit)
 
 - **Mémoire** : Pour de très grands datasets, considérer le filtrage (`--reduce`)
-
----
-
-## Exemple d'Exécution
-
-```bash
-cd src
-python preprocess.py --dataset music --reduce --max_users 50 --max_artists 100
-```
-
-**Sortie attendue** :
-```
-Filtrage des données brutes: max 50 utilisateurs, 100 artistes...
-Données originales: 5000 interactions
-Sélection: 50 utilisateurs, 100 artistes
-Fichier filtré: 450 interactions
-Prétraitement du dataset music...
-[... statistiques ...]
-Terminé!
-```
 
 ---
 
