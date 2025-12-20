@@ -101,3 +101,7 @@ Thumbs.db
 
 # Legacy ML/Recommendation code (temporairement ignoré)
 legacy_ml/
+
+CONTRIBUTIONS_TECHNIQUES_FR.md
+VISUALISATION_ALGORITHMES_FR.md
+

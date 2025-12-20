@@ -65,11 +65,11 @@ Voir la section "Visualiser le graphe" ci-dessous pour plus de détails.
 
 ### Option 1: Prétraitement avec réduction automatique (RECOMMANDÉ)
 
-Pour créer un dataset réduit directement pendant le preprocessing (30 users, 50 artists par défaut):
+Pour créer un dataset réduit directement pendant le preprocessing (18 users, 18 artists par défaut):
 
 ```bash
 cd src
-python preprocess.py --dataset music --reduce --max_users 30 --max_artists 50
+python preprocess.py --dataset music --reduce --max_users 18 --max_artists 18
 ```
 
 **Avantages:**
