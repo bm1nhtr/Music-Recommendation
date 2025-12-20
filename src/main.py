@@ -3,8 +3,10 @@ Point d'entrée principal pour les algorithmes graph classiques
 """
 import argparse
 import os
-from graph_loader import load_kg, load_ratings, get_user_history
+from dfs import DFS
+from graph_loader import load_kg, load_ratings, get_user_history, verify_data_integrity
 from graph_visualizer import visualize_graph_structure, visualize_all_relations, print_graph_statistics
+
 
 # Configuration par défaut
 DATA_PATH = '../final_data'  # Chemin vers les données traitées
@@ -29,8 +31,22 @@ def main():
                        help='Nombre maximum de nœuds à visualiser')
     parser.add_argument('--use_small', action='store_true',
                        help='Utiliser le dataset réduit (kg_final_small.txt)')
+    parser.add_argument('--verify', action='store_true',
+                       help='Vérifier l\'intégrité des données (checksums) et quitter')
     
     args = parser.parse_args()
+    
+    # Si --verify, seulement vérifier et quitter
+    if args.verify:
+        print(f"Vérification de l'intégrité des données pour le dataset: {args.dataset}")
+        results = verify_data_integrity(DATA_PATH, args.dataset, use_small=args.use_small, verbose=True)
+        if results.get('all_valid', False):
+            print("\n✅ Les données sont valides - Reproducibility garantie entre différentes machines!")
+            return 0
+        else:
+            print("\n❌ Les données ne sont pas valides - Reproducibility NON garantie!")
+            print("   Solution: Relancez le preprocessing avec les mêmes paramètres sur les deux machines.")
+            return 1
     
     # Charger le graphe (retourne maintenant metadata aussi)
     print(f"Chargement du graphe pour le dataset: {args.dataset}")
@@ -99,6 +115,12 @@ def main():
     
     #TODO: Implement the algorithm
     # Les algorithmes qu'on a fait : BFS, Dijkstra, Prim, etc...
+    # test = DFS(DATA_PATH)
+    # print(f"DFS initialized with root directory: {test.get_root_dir()}")
+    # df = test.read_file(DEFAULT_DATASET,"kg_final.txt")
+    # print(f"Data read from file:\n{df.head()}")
+    # print(n_entity, n_relation)
+    # print(kg)
 
 
 if __name__ == '__main__':

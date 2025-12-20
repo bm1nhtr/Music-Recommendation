@@ -1,8 +1,10 @@
 filtered=True
-max_users_requested=30
-max_artists_requested=50
-n_users_actual=30
-n_artists_actual=50
-n_entities=80
+max_users_requested=18
+max_artists_requested=18
+n_users_actual=13
+n_artists_actual=18
+n_entities=31
 n_relations=4
-n_kg_triples=2278
+n_kg_triples=354
+kg_file_hash=ba8db2d979f81243c515c2b3ac004e41b2083883f5f49b0d5edacfdef3a7af3a
+ratings_file_hash=bfa3afad2e1ca6c6a65db139f4eaae49830f9800cfd1e0af12c492360f863dbe
